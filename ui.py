@@ -71,46 +71,53 @@ def _display_main_game_screen_tabs():
         st.header("🌍 Ülke Genel Durum Raporları")
         st.write("Ülkenin siyasi ve bölgesel nabzını buradan takip edin.")
 
-        from reports import generate_strategic_health_report, generate_regional_analysis_report, generate_spending_report
+        from reports import generate_regional_analysis_report
 
-        # Raporları iki sütunlu bir düzende göster
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.plotly_chart(generate_regional_analysis_report(), use_container_width=True)
-
-        with col2:
-            st.subheader("Parti İçi Gruplar")
-            if 'factions' in st.session_state and st.session_state.factions:
-                for name, data in st.session_state.factions.items():
-                    st.write(f"**{name}**")
-                    st.progress(data['satisfaction'], text=f"{data['satisfaction']}% Memnuniyet")
-            else:
-                st.warning("Bu parti için fraksiyon bilgisi bulunmuyor.")
+        # TÜM BİLEŞENLERİ ALT ALTA GÖSTER (MOBİL UYUM)
+        st.plotly_chart(generate_regional_analysis_report(), use_container_width=True)
 
         st.divider()
-        st.plotly_chart(generate_strategic_health_report(), use_container_width=True)
-        st.divider()
 
-        st.subheader("Yıllık Harcama Dökümü")
-        if any(st.session_state.yearly_spending["EP"]): # Harcama yapıldıysa
-            fig_ep, fig_treasury = generate_spending_report()
-            col1_spend, col2_spend = st.columns(2)
-            with col1_spend: st.plotly_chart(fig_ep, use_container_width=True)
-            with col2_spend: st.plotly_chart(fig_treasury, use_container_width=True)
+        st.subheader("Parti İçi Gruplar")
+        if 'factions' in st.session_state and st.session_state.factions:
+            for name, data in st.session_state.factions.items():
+                st.write(f"**{name}**")
+                st.progress(data['satisfaction'], text=f"{data['satisfaction']}% Memnuniyet")
         else:
-            st.info("Bu yıl henüz bir harcama yapılmadı.")
+            st.warning("Bu parti için fraksiyon bilgisi bulunmuyor.")
 
     with tab_politika:
-        st.header("📜 Yeni Politikalar Geliştir")
-        st.write("Kaynaklarınızı ve Eylem Puanınızı (EP) kullanarak partinizin geleceğini şekillendirecek kararlar alın.")
+        st.header("📜 Politikalar ve Stratejik Hamleler")
+        status = st.session_state.party_status
+        st.write(f"Şu anki durumunuz: **{status}**. Bu duruma özel ve genel stratejik hamleleri buradan yapabilirsiniz.")
 
-        from actions import POLITIKA_ACTIONS
+        from actions import GENEL_ACTIONS, MUHALEFET_ACTIONS, IKTIDAR_ACTIONS
+
+        # Duruma göre gösterilecek eylemleri birleştir
+        available_actions = GENEL_ACTIONS.copy()
+        if status == "Muhalefet":
+            available_actions.update(MUHALEFET_ACTIONS)
+        elif status == "İktidar":
+            available_actions.update(IKTIDAR_ACTIONS)
+
         ep = st.session_state.action_points
 
-        # Eylemleri 2'li sütunlar halinde göster
+        # İttifak görüşmesi için özel arayüz
+        if "MUH_ITTİFAK_GORUSMESI" in available_actions:
+            action = available_actions.pop("MUH_ITTİFAK_GORUSMESI")
+            with st.expander(f"🤝 {action['name']}", expanded=False):
+                st.caption(action['description'])
+                possible_allies = [p for p in PARTIES.keys() if p != st.session_state.selected_party_name]
+                target_party = st.selectbox("Görüşülecek Partiyi Seçin:", possible_allies)
+
+                is_disabled = ep < action['ep_cost']
+                if st.button("Görüşmeyi Başlat", key="alliance_talk", disabled=is_disabled, use_container_width=True):
+                    game_state.start_alliance_talk(target_party)
+                    st.rerun()
+
+        # Diğer eylemleri 2'li sütunlar halinde göster
         cols = st.columns(2)
-        for i, (key, action) in enumerate(POLITIKA_ACTIONS.items()):
+        for i, (key, action) in enumerate(available_actions.items()):
             with cols[i % 2]:
                 with st.container(border=True):
                     st.subheader(action['name'])
@@ -130,14 +137,16 @@ def _display_main_game_screen_tabs():
 
     with tab_propaganda:
         st.header("📢 Algı Yönetimi ve Propaganda")
-        st.write("Kamuoyu desteğini artırmak ve rakiplerinizi zayıflatmak için çeşitli propaganda taktikleri kullanın.")
+        st.write("Kamuoyu desteğini artırmak ve rakiplerinizi zayıflatmak için çeşitli propaganda taktikleri kullanın. Bu eylemler her durumda (İktidar/Muhalefet) kullanılabilir.")
 
-        from actions import PROPAGANDA_ACTIONS
+        from actions import GENEL_ACTIONS
         ep = st.session_state.action_points
 
-        # Eylemleri 2'li sütunlar halinde göster
+        # Genel eylemleri (propaganda olarak kabul edilen) 2'li sütunlar halinde göster
         cols = st.columns(2)
-        for i, (key, action) in enumerate(PROPAGANDA_ACTIONS.items()):
+        # Sadece propaganda olarak kabul edilenleri göstermek için bir filtreleme yapılabilir.
+        # Şimdilik tüm genel eylemler gösteriliyor.
+        for i, (key, action) in enumerate(GENEL_ACTIONS.items()):
             with cols[i % 2]:
                 with st.container(border=True):
                     st.subheader(action['name'])
@@ -146,7 +155,7 @@ def _display_main_game_screen_tabs():
                     is_disabled = ep < action['ep_cost'] or st.session_state.resources['treasury'] < abs(action['effects'].get('treasury', 0))
                     if st.button("Başlat", key=f"action_{key}", disabled=is_disabled, use_container_width=True):
                         game_state.update_resources_from_action(action)
-                        st.session_state.action_feedback = {"type": "info", "message": f"'{action['name']}' propagandası başarıyla başlatıldı."}
+                        st.session_state.action_feedback = {"type": "info", "message": f"'{action['name']}' eylemi başarıyla uygulandı."}
                         st.rerun()
 
                     cost_str = f"**EP Maliyeti:** {action['ep_cost']}"

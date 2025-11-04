@@ -15,11 +15,10 @@ from events import get_random_event
 def initialize_game_state(selected_party_name):
     """Oyun durumunu ve TÜM partilerin başlangıç durumunu session_state içinde başlatır."""
     if 'game_started' not in st.session_state:
-        # ... (başlangıç kodunun çoğu aynı)
         st.session_state.game_started = True
         st.session_state.selected_party_name = selected_party_name
         st.session_state.year = 1
-        st.session_state.action_points = 5
+        st.session_state.action_points = 3 # PART 4: EP Değeri 3'e düşürüldü
 
         st.session_state.action_feedback = None
         st.session_state.event_feedback = None
@@ -32,7 +31,8 @@ def initialize_game_state(selected_party_name):
         st.session_state.factions = copy.deepcopy(PARTIES[selected_party_name]['factions'])
 
         st.session_state.cumulative_risky_actions = 0
-        st.session_state.in_power = False
+        st.session_state.party_status = "Muhalefet" # PART 4: Yeni durum değişkeni
+        st.session_state.in_power = False # Bu eski değişken ileride kaldırılabilir
         st.session_state.governing_approval = 50
         st.session_state.terms_in_power = 0
         st.session_state.yearly_spending = {"EP": {}, "Treasury": {}}
@@ -121,6 +121,37 @@ def _normalize_public_support():
         current_val = st.session_state.all_parties_state[max_support_party_name]['public_support']
         st.session_state.all_parties_state[max_support_party_name]['public_support'] = max(0, min(100, round(current_val, 2)))
 
+def start_alliance_talk(target_party_name):
+    """İttifak görüşmesini başlatır ve sonucunu hesaplar."""
+    player_party_name = st.session_state.selected_party_name
+    player_capital = st.session_state.resources['political_capital']
+
+    # EP maliyetini düşür
+    st.session_state.action_points -= 2 # TODO: Maliyeti actions.py'den al
+
+    # Başarı Olasılığını Hesapla
+    ideological_score = _calculate_ideological_distance(player_party_name, target_party_name)
+    capital_bonus = (player_capital - 50) / 100 # 50 sermaye nötr, 100 sermaye +0.5 bonus
+
+    # Temel başarı şansı %50, ideoloji ve sermaye ile modifiye edilir
+    success_chance = 0.5 + (ideological_score - 0.5) + capital_bonus
+    success_chance = max(0.05, min(0.95, success_chance)) # Şansı %5 ile %95 arasında sınırla
+
+    if random.random() < success_chance:
+        # BAŞARILI
+        st.session_state.party_status = "İktidar"
+        st.session_state.action_feedback = {
+            "type": "success",
+            "message": f"🤝 BAŞARILI! {target_party_name} ile bir koalisyon hükümeti kuruldu. Artık İKTİDARdasınız!"
+        }
+    else:
+        # BAŞARISIZ
+        st.session_state.resources['political_capital'] -= 10 # Başarısızlık bedeli
+        st.session_state.action_feedback = {
+            "type": "error",
+            "message": f"❌ BAŞARISIZ! {target_party_name} ile yapılan görüşmeler çöktü. Değerli siyasi sermaye kaybettiniz."
+        }
+
 def end_year():
     """Yılı sonlandırır, kaynakları günceller ve EP'yi yeniler."""
     st.session_state.previous_resources = copy.deepcopy(st.session_state.resources)
@@ -129,7 +160,7 @@ def end_year():
 
     # Yılı artır ve EP'yi yenile
     st.session_state.year += 1
-    st.session_state.action_points = 5  # EP YENİLEME DÜZELTMESİ
+    st.session_state.action_points = 3  # PART 4: EP her yıl 3'e sıfırlanır, birikmez.
 
     # Yıllık harcamaları sıfırla
     st.session_state.yearly_spending = {"EP": {}, "Treasury": {}}
@@ -167,6 +198,40 @@ def is_game_over():
         return True
 
     return False
+
+def _calculate_ideological_distance(party1_name, party2_name):
+    """İki parti arasındaki ideolojik yakınlık skorunu hesaplar (0-1 aralığında)."""
+    spectrum1 = PARTIES[party1_name].get('spectrum', 'Merkez')
+    spectrum2 = PARTIES[party2_name].get('spectrum', 'Merkez')
+
+    # Aynı spektrum = çok yakın
+    if spectrum1 == spectrum2:
+        return 0.8
+
+    # Komşu spektrumlar (Merkez her şeye komşu)
+    neighbors = {
+        "Sağ": ["Merkez-Sağ", "Merkez"],
+        "Merkez-Sağ": ["Sağ", "Merkez"],
+        "Sol": ["Merkez-Sol", "Merkez", "Yeşil"],
+        "Merkez-Sol": ["Sol", "Merkez", "Yeşil"],
+        "Merkez": ["Sağ", "Merkez-Sağ", "Sol", "Merkez-Sol"],
+        "Yeşil": ["Sol", "Merkez-Sol"],
+        "Diğer": []
+    }
+
+    if spectrum2 in neighbors.get(spectrum1, []):
+        return 0.5
+
+    # Zıt spektrumlar = çok uzak
+    opposites = {
+        "Sağ": "Sol",
+        "Sol": "Sağ"
+    }
+    if opposites.get(spectrum1) == spectrum2:
+        return 0.1
+
+    # Diğer tüm durumlar
+    return 0.25
 
 # Diğer yardımcı fonksiyonlar aynı
 def get_internal_tension():
