@@ -1,112 +1,93 @@
 # -*- coding: utf-8 -*-
 
 """
-reports.py: Matplotlib kullanarak görsel raporlar üretir.
-Her tur sonunda oyun durumu hakkında üç farklı grafik oluşturur,
-bunları ekranda gösterir ve /reports/ klasörüne kaydeder.
+reports.py: Plotly kullanarak interaktif görsel raporlar üretir.
+Bu fonksiyonlar, Streamlit arayüzünde gösterilmek üzere Plotly Figure nesneleri döndürür.
 """
 
-import matplotlib
-import matplotlib.pyplot as plt
+import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
 import numpy as np
-import os
-from game_state import GameState
 from parties import REGIONS
 
-# Raporların kaydedileceği klasörün varlığını kontrol et
-if not os.path.exists('reports'):
-    os.makedirs('reports')
-
-def generate_strategic_health_report(game_state: GameState):
+def generate_strategic_health_report():
     """
-    Stratejik Sağlık Takibi: 4 temel kaynağın zaman içindeki değişimini gösteren çizgi grafik.
+    Stratejik Sağlık Takibi: 4 temel kaynağın zaman içindeki değişimini gösteren
+    interaktif bir Plotly çizgi grafiği oluşturur.
     """
-    history = game_state.history
-    turns = history['turns']
+    history = st.session_state.history
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(turns, history['political_capital'], label='Siyasi Sermaye', marker='o')
-    plt.plot(turns, history['cohesion'], label='İdeolojik Tutarlılık', marker='o')
-    plt.plot(turns, history['bureaucratic_efficiency'], label='Bürokratik Verimlilik', marker='o')
-    plt.plot(turns, history['public_support'], label='Kamuoyu Desteği', marker='o')
+    fig = go.Figure()
 
-    plt.title('Stratejik Sağlık Takibi (Tur 0\'dan İtibaren)')
-    plt.xlabel('Tur')
-    plt.ylabel('Değer (0-100)')
-    plt.legend()
-    plt.grid(True)
-    plt.xticks(range(0, game_state.turn, max(1, game_state.turn // 10)))
-    plt.ylim(0, 100)
+    fig.add_trace(go.Scatter(x=history['turns'], y=history['political_capital'],
+                             mode='lines+markers', name='Siyasi Sermaye'))
+    fig.add_trace(go.Scatter(x=history['turns'], y=history['cohesion'],
+                             mode='lines+markers', name='İdeolojik Tutarlılık'))
+    fig.add_trace(go.Scatter(x=history['turns'], y=history['bureaucratic_efficiency'],
+                             mode='lines+markers', name='Bürokratik Verimlilik'))
+    fig.add_trace(go.Scatter(x=history['turns'], y=history['public_support'],
+                             mode='lines+markers', name='Kamuoyu Desteği'))
 
-    filepath = f'reports/tur_{game_state.turn}_stratejik_saglik.png'
-    plt.savefig(filepath)
-    print(f"Stratejik Sağlık Raporu oluşturuldu: {filepath}")
+    fig.update_layout(
+        title='Stratejik Sağlık Takibi',
+        xaxis_title='Tur',
+        yaxis_title='Değer (0-100)',
+        yaxis_range=[0,100],
+        legend_title="Kaynaklar",
+        template="plotly_white"
+    )
 
+    return fig
 
-def generate_regional_analysis_report(game_state: GameState):
+def generate_regional_analysis_report():
     """
-    Bölgesel Başarı Analizi: Bölgelerdeki oy oranı ile doğal çekimi karşılaştıran sütun grafik.
+    Bölgesel Başarı Haritası Simülasyonu: Bölgelerdeki oy oranını gösteren
+    interaktif bir ısı haritası/blok grafiği oluşturur.
     """
-    party_name = game_state.selected_party_name
+    party_name = st.session_state.selected_party_name
     region_names = list(REGIONS.keys())
-    natural_attraction = [REGIONS[r]['natural_attraction'][party_name] for r in region_names]
 
-    current_vote_share = [na + (game_state.resources['public_support'] - 50) / 5 for na in natural_attraction]
+    # Mevcut oy oranını temsili olarak hesapla
+    natural_attraction = [REGIONS[r]['natural_attraction'][party_name] for r in region_names]
+    current_vote_share = [na + (st.session_state.resources['public_support'] - 50) / 5 for na in natural_attraction]
     current_vote_share = [max(5, min(95, v)) for v in current_vote_share]
 
-    x = np.arange(len(region_names))
-    width = 0.35
+    # Bölgeleri bir ızgaraya yerleştir (2x5 düzeni)
+    grid_rows = 2
+    grid_cols = 5
 
-    fig, ax = plt.subplots(figsize=(14, 7))
-    rects1 = ax.bar(x - width/2, natural_attraction, width, label='Doğal Çekim')
-    rects2 = ax.bar(x + width/2, current_vote_share, width, label='Mevcut Oy Oranı')
+    # Verileri ve metinleri ızgara formatına getir
+    vote_grid = np.full((grid_rows, grid_cols), np.nan) # Boş hücreler için NaN
+    text_grid = np.empty((grid_rows, grid_cols), dtype=object)
 
-    ax.set_ylabel('Yüzde (%)')
-    ax.set_title('Bölgesel Başarı Analizi')
-    ax.set_xticks(x)
-    ax.set_xticklabels(region_names, rotation=45, ha="right")
-    ax.legend()
-    ax.grid(axis='y', linestyle='--')
-    plt.ylim(0, 100)
-    fig.tight_layout()
+    for i, (name, vote) in enumerate(zip(region_names, current_vote_share)):
+        row = i // grid_cols
+        col = i % grid_cols
+        vote_grid[row, col] = vote
+        text_grid[row, col] = f"{name}<br>Oy Oranı: {vote:.1f}%"
 
-    filepath = f'reports/tur_{game_state.turn}_bolgesel_analiz.png'
-    plt.savefig(filepath)
-    print(f"Bölgesel Analiz Raporu oluşturuldu: {filepath}")
+    fig = go.Figure(data=go.Heatmap(
+        z=vote_grid,
+        text=text_grid,
+        hoverinfo='text',
+        colorscale='Viridis', # Renk skalası (Yeşil-Sarı-Mavi)
+        showscale=True,
+        zmin=0,
+        zmax=100,
+        colorbar={'title': 'Oy Oranı'}
+    ))
 
+    fig.update_layout(
+        title='Bölgesel Başarı Haritası',
+        xaxis_showgrid=False, yaxis_showgrid=False,
+        xaxis_ticks='', yaxis_ticks='',
+        xaxis_tickvals=[], yaxis_tickvals=[],
+        plot_bgcolor='rgba(0,0,0,0)' # Arka planı transparan yap
+    )
 
-def generate_social_dynamics_report(game_state: GameState):
-    """
-    Toplumsal Dinamikler: Ülke genelindeki hassasiyetleri gösteren pasta grafikleri.
-    """
-    avg_sensitivities = {
-        'Göçmen Hass.': np.mean([r['sensitivities']['immigrant'] for r in REGIONS.values()]),
-        'Gelir Eşitsizliği Alg.': np.mean([r['sensitivities']['inequality'] for r in REGIONS.values()]),
-        'Kutuplaşma Sev.': np.mean([r['sensitivities']['polarization'] for r in REGIONS.values()])
-    }
+    # Eksen etiketlerini kaldır
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle('Ülke Geneli Toplumsal Dinamikler', fontsize=16)
-
-    for i, (label, size) in enumerate(avg_sensitivities.items()):
-        ax = axes[i]
-        ax.pie([size, 100-size], labels=[label, ''], autopct='%1.1f%%', startangle=90, colors=['#ff9999','#66b3ff'])
-        ax.axis('equal')
-
-    filepath = f'reports/tur_{game_state.turn}_toplumsal_dinamikler.png'
-    plt.savefig(filepath)
-    print(f"Toplumsal Dinamikler Raporu oluşturuldu: {filepath}")
-
-def generate_all_reports(game_state: GameState):
-    """
-    Tüm raporları tek seferde oluşturur, kaydeder ve ekranda gösterir.
-    """
-    print("\n--- Raporlar Oluşturuluyor ---")
-    generate_strategic_health_report(game_state)
-    generate_regional_analysis_report(game_state)
-    generate_social_dynamics_report(game_state)
-    print("---------------------------------")
-    # Tüm figürleri oluşturduktan sonra, hepsini aynı anda göster.
-    # Kullanıcı pencereleri kapattığında oyun devam eder.
-    print("\nRapor pencereleri açılıyor... (Devam etmek için pencereleri kapatın)")
-    plt.show()
+    return fig

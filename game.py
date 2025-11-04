@@ -1,89 +1,39 @@
 # -*- coding: utf-8 -*-
 
 """
-game.py: Ana oyun döngüsünü yönetir.
-- Parti seçimi
-- Tur ilerlemesi
-- Oyuncu eylemlerinin işlenmesi
-- TUI ve Raporlama modüllerinin çağrılması
+game.py: Streamlit tabanlı ana uygulama dosyasını yönetir.
+- Streamlit sayfa yapılandırmasını ayarlar.
+- Oyunun durumuna göre (başlangıç, devam ediyor, bitti) doğru arayüz
+  fonksiyonunu (ui.py'den) çağırır.
 """
 
-from parties import PARTIES
-from game_state import GameState
-from actions import ACTIONS
-import tui
-import reports
+import streamlit as st
+import ui
+import game_state
 
-def select_party():
-    """Oyuncunun yöneteceği partiyi seçmesini sağlar."""
-    tui.clear_screen()
-    print("=" * 60)
-    print("Partiler Savaşı'na Hoş Geldiniz!")
-    print("=" * 60)
-    print("\nLütfen yönetmek istediğiniz partiyi seçin:\n")
+def main():
+    """
+    Ana Streamlit uygulama akışını yönetir.
+    """
+    # Sayfa yapılandırmasını ayarla (Manifesto gereği)
+    st.set_page_config(layout="wide", page_title="Partiler Savaşı")
 
-    party_list = list(PARTIES.keys())
-    for i, party_name in enumerate(party_list):
-        print(f"[{i + 1}] {party_name} ({PARTIES[party_name]['ideology']})")
-
-    print("-" * 60)
-
-    while True:
-        try:
-            choice = int(input(f"Seçiminizi yapın (1-{len(party_list)}): "))
-            if 1 <= choice <= len(party_list):
-                return party_list[choice - 1]
-            else:
-                print("Lütfen listedeki numaralardan birini girin.")
-        except ValueError:
-            print("Geçersiz giriş. Lütfen bir sayı girin.")
-
-def main_game_loop():
-    """Ana oyun döngüsünü başlatır ve yönetir."""
-
-    # 1. Parti Seçimi
-    selected_party = select_party()
-
-    # 2. Oyun Durumunu Başlatma
-    game = GameState(selected_party)
-
-    # 3. Ana Döngü
-    while not game.is_game_over():
-        # Tur özeti
-        tui.display_turn_summary(game)
-
-        # Eylem Seçenekleri
-        tui.display_actions(ACTIONS)
-
-        # Oyuncu Kararı
-        action_key = tui.get_player_choice(ACTIONS)
-        chosen_action = ACTIONS[action_key]
-
-        # Eylem Sonuçlarını Uygula
-        print(f"\n'{chosen_action['name']}' eylemi gerçekleştiriliyor...")
-        game.update_resources(chosen_action['effects'])
-
-        # Tur Sonu Raporları Oluştur
-        reports.generate_all_reports(game)
-
-        # Turu Sonlandır
-        game.end_turn()
-
-        # Bir sonraki tura geçmeden önce kullanıcıdan input bekle
-        input("\nTur sonlandı. Devam etmek için Enter'a basın...")
-
-    # 4. Oyun Sonu
-    tui.clear_screen()
-    print("=" * 60)
-    print("OYUN BİTTİ")
-    print("=" * 60)
-    # is_game_over() zaten kaybetme nedenini basıyor.
-    print(f"\nToplam {game.turn - 1} tur oynadınız.")
-    print("Nihai durum raporları 'reports' klasöründe bulunabilir.")
-
+    # Oyunun başlayıp başlamadığını session_state'den kontrol et
+    if 'game_started' not in st.session_state:
+        # Oyun başlamadıysa, parti seçim ekranını göster
+        ui.display_party_selection()
+    else:
+        # Oyun başladıysa, oyunun bitip bitmediğini kontrol et
+        if game_state.is_game_over():
+            # Oyun bittiyse, ana oyun ekranını son bir kez göster
+            # (kaybetme/kazanma mesajı burada gösterilecek)
+            ui.display_main_game_screen()
+            st.balloons()
+            st.title("OYUN BİTTİ!")
+            # Geri bildirim mesajı zaten is_game_over içinde ayarlanıyor.
+        else:
+            # Oyun devam ediyorsa, ana oyun ekranını göster
+            ui.display_main_game_screen()
 
 if __name__ == "__main__":
-    try:
-        main_game_loop()
-    except KeyboardInterrupt:
-        print("\nOyun isteğiniz üzerine kapatıldı.")
+    main()
