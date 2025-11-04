@@ -76,8 +76,6 @@ def _display_main_game_screen_tabs():
         # TÜM BİLEŞENLERİ ALT ALTA GÖSTER (MOBİL UYUM)
         st.plotly_chart(generate_regional_analysis_report(), use_container_width=True)
 
-        st.divider()
-
         st.subheader("Parti İçi Gruplar")
         if 'factions' in st.session_state and st.session_state.factions:
             for name, data in st.session_state.factions.items():
@@ -124,7 +122,7 @@ def _display_main_game_screen_tabs():
                     st.caption(action['description'])
 
                     is_disabled = ep < action['ep_cost'] or st.session_state.resources['treasury'] < abs(action['effects'].get('treasury', 0))
-                    if st.button("Uygula", key=f"action_{key}", disabled=is_disabled, use_container_width=True):
+                    if st.button("Uygula", key=f"politika_{key}", disabled=is_disabled, use_container_width=True):
                         game_state.update_resources_from_action(action)
                         st.session_state.action_feedback = {"type": "info", "message": f"'{action['name']}' eylemi başarıyla uygulandı."}
                         st.rerun()
@@ -153,7 +151,7 @@ def _display_main_game_screen_tabs():
                     st.caption(action['description'])
 
                     is_disabled = ep < action['ep_cost'] or st.session_state.resources['treasury'] < abs(action['effects'].get('treasury', 0))
-                    if st.button("Başlat", key=f"action_{key}", disabled=is_disabled, use_container_width=True):
+                    if st.button("Başlat", key=f"propaganda_{key}", disabled=is_disabled, use_container_width=True):
                         game_state.update_resources_from_action(action)
                         st.session_state.action_feedback = {"type": "info", "message": f"'{action['name']}' eylemi başarıyla uygulandı."}
                         st.rerun()
@@ -194,7 +192,6 @@ def _display_main_game_screen_tabs():
 
 def _display_action_buttons():
     """'Yılı Bitir' butonunu oluşturur."""
-    st.divider()
     ep = st.session_state.action_points
     if st.button(f"🗓️ Yılı Bitir ({ep} EP Kaldı)", use_container_width=True, type="primary"):
         game_state.end_year()
@@ -220,20 +217,23 @@ def _display_proposal_modal():
 # --- Main Screen Function ---
 
 def display_main_game_screen():
-    """Oyunun ana ekranını yeni şemaya göre oluşturur."""
-    _display_header()
-    st.divider()
-    _display_feedback_area()
+    """Oyunun ana ekranını yeni şemaya göre oluşturur (Mobil Odaklı)."""
+    # Ana içeriği dar bir merkezi sütuna sıkıştır
+    _ , main_col, _ = st.columns([1, 4, 1]) # Kenarlarda boşluk bırak
 
-    # Eğer aktif bir önerge varsa, sekmeleri gösterme, sadece önergeyi göster
-    if st.session_state.get('active_proposal'):
-        _display_proposal_modal()
-    else:
-        # Ana içerik ve sekmeler
-        _display_main_game_screen_tabs()
+    with main_col:
+        _display_header()
+        _display_feedback_area()
 
-    # Alt eylem butonları (Yılı Bitir)
-    _display_action_buttons()
+        # Eğer aktif bir önerge varsa, sekmeleri gösterme, sadece önergeyi göster
+        if st.session_state.get('active_proposal'):
+            _display_proposal_modal()
+        else:
+            # Ana içerik ve sekmeler
+            _display_main_game_screen_tabs()
+
+        # Alt eylem butonları (Yılı Bitir)
+        _display_action_buttons()
 
 def display_party_selection():
     """Parti seçim ekranını oluşturur."""
