@@ -15,8 +15,8 @@ def main():
     """
     Ana Streamlit uygulama akışını yönetir.
     """
-    # Sayfa yapılandırmasını ayarla (Manifesto gereği)
-    st.set_page_config(layout="wide", page_title="Partiler Savaşı")
+    # Sayfa yapılandırmasını ayarla (Part 3: Mobil Odaklı)
+    st.set_page_config(layout="centered", page_title="Partiler Savaşı", initial_sidebar_state="collapsed")
 
     # Oyunun başlayıp başlamadığını session_state'den kontrol et
     if 'game_started' not in st.session_state:

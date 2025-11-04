@@ -52,7 +52,14 @@ def update_resources_from_action(action):
     st.session_state.action_points -= action['ep_cost']
 
     effects = action['effects']
-    _apply_effects(effects, st.session_state.selected_party_name)
+    apply_proposal_effects(effects) # Önerge ve Eylem efektleri aynı mantığı kullanabilir
+
+    # --- KARAR AL (ÖNERGE) TETİKLEME MEKANİZMASI ---
+    # Her EP harcayan eylemden sonra %25 ihtimalle bir önerge tetiklenir.
+    if 'active_proposal' not in st.session_state or st.session_state.active_proposal is None:
+        if random.random() < 0.25:
+            from events import get_random_proposal
+            st.session_state.active_proposal = get_random_proposal()
 
     # --- HARCAMA TAKİBİ DÜZELTMESİ ---
     action_name = action['name']
@@ -66,15 +73,83 @@ def update_resources_from_action(action):
         st.session_state.yearly_spending["Treasury"][action_name] = \
             st.session_state.yearly_spending["Treasury"].get(action_name, 0) + treasury_cost
 
-def _apply_effects(effects, party_name):
-    # ... (öncekiyle aynı)
+def apply_proposal_effects(effects):
+    """Verilen efektleri (eylem veya önerge) oyuncunun partisine uygular."""
+    party_name = st.session_state.selected_party_name
     party_state = st.session_state.all_parties_state[party_name]
-    # ...
+
+    for key, value in effects.items():
+        if key == 'risky_action':
+             st.session_state.cumulative_risky_actions += value
+             st.session_state.cumulative_risky_actions = max(0, st.session_state.cumulative_risky_actions)
+        elif key in party_state:
+            party_state[key] = max(0, party_state[key] + value)
+            if key in ['cohesion', 'public_support']:
+                party_state[key] = min(100, party_state[key])
+        elif key.startswith('faction_'):
+            faction_name = key.split('_')[1]
+            if faction_name in st.session_state.factions:
+                st.session_state.factions[faction_name]['satisfaction'] = max(0, min(100, st.session_state.factions[faction_name]['satisfaction'] + value))
+
+    # Efektler kamuoyu desteğini etkiliyorsa, tüm parti oylarını yeniden normalize et
+    if 'public_support' in effects:
+        _normalize_public_support()
+
+
+def _normalize_public_support():
+    """Tüm partilerin kamuoyu desteği toplamını %100'e normalize eder."""
+    all_parties = st.session_state.all_parties_state
+    total_support = sum(party['public_support'] for party in all_parties.values())
+
+    if total_support == 0:
+        return # Herkesin oyu sıfırsa bir şey yapma
+
+    for party_state in all_parties.values():
+        current_support = party_state['public_support']
+        normalized_support = (current_support / total_support) * 100
+        party_state['public_support'] = round(normalized_support, 2)
+
+    # Yuvarlama hatalarından kaynaklanan (~0.01) farkları gidermek için
+    # en yüksek oy oranına sahip partiye farkı ekle/çıkar.
+    final_total = sum(party['public_support'] for party in all_parties.values())
+    discrepancy = 100 - final_total
+
+    if abs(discrepancy) > 0.001: # Sadece anlamlı farklar için düzeltme yap
+        max_support_party_name = max(all_parties, key=lambda p: all_parties[p]['public_support'])
+        st.session_state.all_parties_state[max_support_party_name]['public_support'] += discrepancy
+        # Son değeri de yuvarla ve 0-100 arasında kalmasını sağla
+        current_val = st.session_state.all_parties_state[max_support_party_name]['public_support']
+        st.session_state.all_parties_state[max_support_party_name]['public_support'] = max(0, min(100, round(current_val, 2)))
 
 def end_year():
-    # ... (öncekiyle aynı)
+    """Yılı sonlandırır, kaynakları günceller ve EP'yi yeniler."""
+    st.session_state.previous_resources = copy.deepcopy(st.session_state.resources)
+
+    # TODO: Rakip partilerin eylemlerini simüle et (Part 3 hedefi)
+
+    # Yılı artır ve EP'yi yenile
     st.session_state.year += 1
-    # ...
+    st.session_state.action_points = 5  # EP YENİLEME DÜZELTMESİ
+
+    # Yıllık harcamaları sıfırla
+    st.session_state.yearly_spending = {"EP": {}, "Treasury": {}}
+
+    # Geri bildirimleri temizle
+    st.session_state.action_feedback = None
+    event = get_random_event()
+    if event:
+        st.session_state.event_feedback = {"type": "warning", "message": f"📢 YILIN OLAYI: {event['name']} - {event['description']}"}
+        _apply_effects(event['effects'], st.session_state.selected_party_name)
+        # Olay oyları etkilediyse normalize et
+        if 'public_support' in event['effects']:
+            _normalize_public_support()
+    else:
+        st.session_state.event_feedback = {"type": "info", "message": f"🗓️ {st.session_state.year}. Yıl Başladı! Yeni hedefler ve zorluklar sizi bekliyor."}
+
+    # Raporlama için geçmiş verileri güncelle
+    st.session_state.history["years"].append(st.session_state.year)
+    for resource in ["political_capital", "cohesion", "bureaucratic_efficiency", "public_support"]:
+        st.session_state.history[resource].append(st.session_state.resources[resource])
 
 def is_game_over():
     """Tamamen işlevsel kazanma ve kaybetme şartları."""
