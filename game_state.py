@@ -139,10 +139,8 @@ def end_year():
     event = get_random_event()
     if event:
         st.session_state.event_feedback = {"type": "warning", "message": f"📢 YILIN OLAYI: {event['name']} - {event['description']}"}
-        _apply_effects(event['effects'], st.session_state.selected_party_name)
-        # Olay oyları etkilediyse normalize et
-        if 'public_support' in event['effects']:
-            _normalize_public_support()
+        apply_proposal_effects(event['effects']) # DÜZELTME: Doğru fonksiyonu çağır
+        # Normalizasyon zaten apply_proposal_effects içinde tetikleniyor
     else:
         st.session_state.event_feedback = {"type": "info", "message": f"🗓️ {st.session_state.year}. Yıl Başladı! Yeni hedefler ve zorluklar sizi bekliyor."}
 
