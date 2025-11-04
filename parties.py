@@ -8,6 +8,7 @@ değişmeyen tüm niteliklerini merkezi bir yerde toplar.
 
 PARTIES = {
     "Ulusal Birlik Partisi": {
+        "emoji": "🐺",
         "ideology": "Sıkı Milliyetçilik",
         "slogan": "Tek Vatan, Tek Yürek!",
         "description": "Devletin bölünmez bütünlüğünü ve ulusal egemenliği her şeyin üzerinde tutan, köklü bir parti. Güçlü bir ordu ve merkeziyetçi bir yönetim anlayışını savunur.",
@@ -23,6 +24,7 @@ PARTIES = {
         }
     },
     "Özgürlük ve Demokrasi Hareketi": {
+        "emoji": "🗽",
         "ideology": "Liberalizm",
         "slogan": "Birey Özgür, Toplum Güçlü!",
         "description": "Bireysel hak ve özgürlükleri, serbest piyasa ekonomisini ve sivil toplumu merkeze alan bir hareket. Ekonomik kalkınma ve inovasyona büyük önem verir.",
@@ -38,6 +40,7 @@ PARTIES = {
         }
     },
     "Adalet ve Refah Partisi": {
+        "emoji": "🕌",
         "ideology": "Muhafazakâr Demokrasi",
         "slogan": "Halka Hizmet, Hakka Hizmettir!",
         "description": "Toplumun geleneksel ve manevi değerlerini koruyarak, sosyal adalet ve refahı artırmayı hedefleyen geniş tabanlı bir parti.",
@@ -53,6 +56,7 @@ PARTIES = {
         }
     },
     "Halkın Gücü Partisi": {
+        "emoji": "✊",
         "ideology": "Demokratik Sosyalizm",
         "slogan": "Eşitlik, Adalet, Emek!",
         "description": "Emekçinin ve ezilenin hakkını savunan, kamucu politikaları ve sendikal örgütlenmeyi temel alan bir parti.",
@@ -68,6 +72,7 @@ PARTIES = {
         }
     },
     "Çevre ve Yeşil Yaşam Partisi": {
+        "emoji": "🌳",
         "ideology": "Ekolojizm",
         "slogan": "Gelecek Yeşil Olacak!",
         "description": "Doğal yaşamın korunmasını ve sürdürülebilir kalkınmayı savunan, çevre politikalarını merkeze alan bir parti.",
@@ -78,6 +83,7 @@ PARTIES = {
         }
     },
     "Reform ve Teknoloji Partisi": {
+        "emoji": "🔬",
         "ideology": "Teknokrasi",
         "slogan": "Akılla Yönet, Geleceği Fethet!",
         "description": "Bilim, teknoloji ve veriye dayalı yönetimi savunan; liyakat ve verimliliği temel alan bir parti.",
@@ -88,6 +94,7 @@ PARTIES = {
         }
     },
     "Bölgesel Otonomi Cephesi": {
+        "emoji": "🌍",
         "ideology": "Federalizm",
         "slogan": "Yerinden Yönetim, Gerçek Demokrasi!",
         "description": "Merkezi yönetimin yetkilerinin yerel yönetimlere devredilmesini savunan, kültürel çeşitliliğe önem veren bir cephe.",
@@ -98,6 +105,7 @@ PARTIES = {
         }
     },
     "Tarafsızlar Birliği": {
+        "emoji": "⚖️",
         "ideology": "Pragmatizm",
         "slogan": "Ne Sağ, Ne Sol, Tek Yol Akıl!",
         "description": "İdeolojik kamplaşmalara karşı, sorunlara akılcı ve duruma özel çözümler bulmayı amaçlayan bir oluşum.",
