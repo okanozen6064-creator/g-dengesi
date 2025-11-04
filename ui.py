@@ -116,6 +116,17 @@ def display_main_game_screen():
 
 def display_party_selection():
     """Parti seçim ekranını oluşturur."""
-    # ... (aynı)
     st.title("Partiler Savaşı")
-    # ...
+    st.subheader("Bir Parti Seçerek Oyuna Başlayın")
+
+    # Partileri 4'lü sütunlar halinde göster
+    cols = st.columns(4)
+    party_names = list(PARTIES.keys())
+
+    for i, party_name in enumerate(party_names):
+        with cols[i % 4]:
+            st.markdown(f"#### {party_name}")
+            st.caption(PARTIES[party_name]['description'])
+            if st.button(f"{party_name} Olarak Başla", key=f"party_{party_name}", use_container_width=True):
+                game_state.initialize_game_state(party_name)
+                st.rerun() # Sayfayı yeniden yükleyerek ana oyun ekranına geçiş yap
