@@ -15,8 +15,21 @@ def main():
     """
     Ana Streamlit uygulama akışını yönetir.
     """
-    # Sayfa yapılandırmasını ayarla (Part 3: Mobil Odaklı)
+    # Sayfa yapılandırmasını ayarla (Part 4: Sabit Dashboard)
     st.set_page_config(layout="centered", page_title="Partiler Savaşı", initial_sidebar_state="collapsed")
+
+    # GÖRSEL KISITLAMA: Dikey kaydırmayı engellemek için CSS enjeksiyonu
+    st.markdown("""
+        <style>
+            .main .block-container {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+            html, body, [class*="st-"] {
+                overflow-y: hidden;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
     # Oyunun başlayıp başlamadığını session_state'den kontrol et
     if 'game_started' not in st.session_state:

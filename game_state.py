@@ -248,3 +248,19 @@ def get_corruption_perception():
     if risky_actions >= 5: return "Yüksek"
     if risky_actions >= 3: return "Orta"
     return "Düşük"
+
+def get_vekil_sayisi(party_name):
+    """Basit orantı ile bir partinin meclisteki vekil sayısını hesaplar."""
+    all_parties = st.session_state.all_parties_state
+    total_support = sum(p['public_support'] for p in all_parties.values() if p['public_support'] > 0)
+
+    # %10 seçim barajı
+    party_support = all_parties[party_name]['public_support']
+    if total_support == 0 or party_support < 10:
+        return 0
+
+    baraji_gecen_destek = sum(p['public_support'] for p in all_parties.values() if p['public_support'] >= 10)
+    if baraji_gecen_destek == 0:
+        return 0
+
+    return round((party_support / baraji_gecen_destek) * 600)
