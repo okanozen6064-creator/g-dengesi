@@ -13,12 +13,11 @@ from reports import generate_regional_analysis_report
 
 def _display_ulke_durumu_panel():
     """'Ülke Durumu' panelinin içeriğini oluşturur."""
-    st.subheader("🌍 Ülke Durumu")
     st.plotly_chart(generate_regional_analysis_report(), use_container_width=True)
-    st.subheader("Parti İçi Gruplar")
     if 'factions' in st.session_state and st.session_state.factions:
-        for name, data in st.session_state.factions.items():
-            st.progress(data['satisfaction'], text=f"{name}: {data['satisfaction']}% Memnuniyet")
+        with st.container(border=True):
+            for name, data in st.session_state.factions.items():
+                st.progress(data['satisfaction'], text=f"{name}: {data['satisfaction']}% Memnuniyet")
     else:
         st.warning("Bu parti için fraksiyon bilgisi bulunmuyor.")
 
@@ -85,6 +84,20 @@ def _display_meclis_panel():
                 st.session_state.active_proposal = proposal
                 st.rerun()
 
+def _display_header():
+    """Lider/Parti durum çubuğunu (üst kısım) oluşturur."""
+    party_name = st.session_state.selected_party_name
+    resources = st.session_state.resources
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        st.markdown(f"<h1 style='text-align: center; font-size: 5rem; margin-top: -1rem;'>{PARTIES[party_name]['emoji']}</h1>", unsafe_allow_html=True)
+    with col2:
+        sub_col1, sub_col2, sub_col3, sub_col4 = st.columns(4)
+        sub_col1.metric("💰 Bütçe", f"{resources['treasury']:,}")
+        sub_col2.metric("📈 Oy Oranı", f"{resources['public_support']:.1f}%")
+        sub_col3.metric("👑 S. Sermaye", resources['political_capital'])
+        sub_col4.metric("🏛️ Vekil", game_state.get_vekil_sayisi(party_name))
+
 # --- Ana Dashboard Mimarisi ---
 
 def display_main_game_screen():
@@ -92,17 +105,9 @@ def display_main_game_screen():
 
     # --- ÜST PANEL (LİDER ÖZETİ) ---
     with st.container(height=150, border=False):
-        party_name = st.session_state.selected_party_name
-        resources = st.session_state.resources
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            st.markdown(f"<h1 style='text-align: center; font-size: 5rem; margin-top: -1rem;'>{PARTIES[party_name]['emoji']}</h1>", unsafe_allow_html=True)
-        with col2:
-            sub_col1, sub_col2, sub_col3, sub_col4 = st.columns(4)
-            sub_col1.metric("💰 Bütçe", f"{resources['treasury']:,}")
-            sub_col2.metric("📈 Oy Oranı", f"{resources['public_support']:.1f}%")
-            sub_col3.metric("👑 S. Sermaye", resources['political_capital'])
-            sub_col4.metric("🏛️ Vekil", game_state.get_vekil_sayisi(party_name))
+        _display_header()
+
+    st.divider() # Üst panel ile orta panel arasına ayırıcı çizgi
 
     # --- ORTA PANEL (DİNAMİK İÇERİK) ---
     with st.container(height=450, border=True):

@@ -61,6 +61,6 @@ def generate_regional_analysis_report():
         xaxis_visible=False, yaxis_visible=False,
         plot_bgcolor='rgba(0,0,0,0)',
         annotations=annotations,
-        height=350 # Mobil uyum için yüksekliği düşür
+        height=210 # PART 4: Dikey alanı %40 küçült
     )
     return fig

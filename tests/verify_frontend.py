@@ -3,7 +3,7 @@ import re
 from playwright.sync_api import Page, expect
 
 def test_homepage_loads(page: Page):
-    page.goto("http://localhost:8511")
+    page.goto("http://localhost:8512")
 
     # Expect a title "to contain" a substring.
     expect(page).to_have_title(re.compile("Partiler Savaşı"))
@@ -13,4 +13,4 @@ def test_homepage_loads(page: Page):
     expect(header).to_be_visible()
 
     # Take a screenshot
-    page.screenshot(path="part4_dashboard_view.png")
+    page.screenshot(path="final_polished_view.png")
